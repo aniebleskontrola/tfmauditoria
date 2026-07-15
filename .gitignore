@@ -4,3 +4,4 @@ dist/
 *.log
 coverage/
 backend/data/bitacora.json
+backend/data/usuarios.json

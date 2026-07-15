@@ -1,4 +1,4 @@
-import { API_URL } from "./api.js";
+import { API_URL, getToken } from "./api.js";
 
 // Cola de eventos capturados en el portal. Se envían por lotes para no saturar la red.
 let cola = [];
@@ -30,7 +30,10 @@ export function flush(usarBeacon = false) {
     navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
     return;
   }
-  fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+  const headers = { "Content-Type": "application/json" };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  fetch(url, { method: "POST", headers, body, keepalive: true }).catch(() => {});
 }
 
 // Registra un evento de navegación entre módulos del portal.

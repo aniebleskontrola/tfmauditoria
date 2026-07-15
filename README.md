@@ -35,8 +35,28 @@ npm run dev
 
 Portal: `http://localhost:5173`
 
+## Autenticación y roles
+
+El portal requiere inicio de sesión. Las contraseñas se almacenan cifradas (scrypt con sal) en `backend/data/usuarios.json` (generado al arrancar) y la sesión se gestiona con un token firmado (HMAC SHA-256) enviado en el encabezado `Authorization: Bearer <token>`.
+
+Perfiles disponibles (RBAC):
+
+- **administrador** / **auditor**: acceso completo, incluido el registro de evidencias.
+- **consultor**: acceso de solo lectura (no puede registrar evidencias).
+
+Credenciales de demostración:
+
+| Usuario | Contraseña | Rol |
+| --- | --- | --- |
+| admin | Admin123* | administrador |
+| auditor | Auditor123* | auditor |
+| consultor | Consultor123* | consultor |
+
+El secreto de firma del token se configura con `AUTH_SECRET` (ver `.env.example`).
+
 ## Funcionalidades
 
+- Inicio de sesión con usuarios, contraseña cifrada y control de acceso por rol.
 - Panel resumen de evidencias (total, estados y áreas).
 - Registro de evidencias con persistencia en JSON.
 - Repositorio con filtros por área, estado y texto.

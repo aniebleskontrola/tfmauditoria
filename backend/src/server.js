@@ -13,6 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_FILE = path.join(__dirname, "..", "data", "evidencias.json");
 const AUDIT_FILE = path.join(__dirname, "..", "data", "bitacora.json");
+const USERS_FILE = path.join(__dirname, "..", "data", "usuarios.json");
 const MAX_EVENTOS = 5000;
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -246,12 +247,104 @@ function analizarConsulta(pregunta, items) {
 }
 
 // ---------------------------------------------------------------------------
+// Autenticación: usuarios con contraseña cifrada (scrypt) y token firmado (HMAC)
+// ---------------------------------------------------------------------------
+const AUTH_SECRET = process.env.AUTH_SECRET || "tfmauditoria-secret-demo";
+const TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas
+
+const hashPassword = (password, salt) => crypto.scryptSync(String(password), salt, 64).toString("hex");
+
+function seedUsers() {
+  const defaults = [
+    { id: 1, usuario: "admin", nombre: "Administrador del sistema", rol: "administrador", password: "Admin123*" },
+    { id: 2, usuario: "auditor", nombre: "Auditor de seguridad", rol: "auditor", password: "Auditor123*" },
+    { id: 3, usuario: "consultor", nombre: "Consultor de solo lectura", rol: "consultor", password: "Consultor123*" },
+  ];
+  const users = defaults.map((u) => {
+    const salt = crypto.randomBytes(16).toString("hex");
+    return { id: u.id, usuario: u.usuario, nombre: u.nombre, rol: u.rol, salt, hash: hashPassword(u.password, salt) };
+  });
+  try { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8"); } catch (err) { console.error("No se pudo crear el archivo de usuarios:", err.message); }
+  console.log("[auth] Usuarios de demostración: admin/Admin123*, auditor/Auditor123*, consultor/Consultor123*");
+  return users;
+}
+
+function readUsers() {
+  try {
+    const data = JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
+    return Array.isArray(data) && data.length ? data : seedUsers();
+  } catch {
+    return seedUsers();
+  }
+}
+const usuarios = readUsers();
+
+const firmar = (cuerpo) => crypto.createHmac("sha256", AUTH_SECRET).update(cuerpo).digest("base64url");
+
+function crearToken(payload) {
+  const cuerpo = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + TOKEN_TTL_MS })).toString("base64url");
+  return `${cuerpo}.${firmar(cuerpo)}`;
+}
+
+function verificarToken(token) {
+  if (!token || !token.includes(".")) return null;
+  const [cuerpo, sig] = token.split(".");
+  if (!sig || firmar(cuerpo) !== sig) return null;
+  try {
+    const data = JSON.parse(Buffer.from(cuerpo, "base64url").toString("utf-8"));
+    if (!data.exp || Date.now() > data.exp) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function autenticar(req, res, next) {
+  const token = (req.header("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  const data = verificarToken(token);
+  if (!data) return res.status(401).json({ message: "Sesión no válida o expirada. Inicie sesión nuevamente." });
+  req.usuario = data;
+  next();
+}
+
+function requireRol(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.usuario?.rol)) {
+      return res.status(403).json({ message: "No tiene permisos suficientes para realizar esta acción." });
+    }
+    next();
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Rutas de la API
 // ---------------------------------------------------------------------------
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
-app.get("/api/evidencias", (_req, res) => res.json(readEvidences()));
 
-app.post("/api/evidencias", (req, res) => {
+app.post("/api/login", (req, res) => {
+  const nombreUsuario = String(req.body?.usuario || "").toLowerCase().trim();
+  const u = usuarios.find((x) => x.usuario === nombreUsuario);
+  if (!u || hashPassword(req.body?.password || "", u.salt) !== u.hash) {
+    registrarEvento({ origen: "portal", tipo: "api", usuario: nombreUsuario || "desconocido", accion: "Inicio de sesión fallido", detalle: "Credenciales inválidas.", ip: req.ip });
+    return res.status(401).json({ message: "Usuario o contraseña incorrectos." });
+  }
+  const publico = { id: u.id, usuario: u.usuario, nombre: u.nombre, rol: u.rol };
+  const token = crearToken(publico);
+  registrarEvento({ origen: "portal", tipo: "accion", usuario: u.usuario, accion: "Inicio de sesión", detalle: `${u.nombre} (${u.rol}) inició sesión.`, ip: req.ip });
+  res.json({ token, usuario: publico });
+});
+
+app.get("/api/me", autenticar, (req, res) => {
+  res.json({ usuario: { id: req.usuario.id, usuario: req.usuario.usuario, nombre: req.usuario.nombre, rol: req.usuario.rol } });
+});
+
+app.post("/api/logout", autenticar, (req, res) => {
+  registrarEvento({ origen: "portal", tipo: "accion", usuario: req.usuario.usuario, accion: "Cierre de sesión", detalle: `${req.usuario.nombre} cerró sesión.`, ip: req.ip });
+  res.json({ ok: true });
+});
+app.get("/api/evidencias", autenticar, (_req, res) => res.json(readEvidences()));
+
+app.post("/api/evidencias", autenticar, requireRol("administrador", "auditor"), (req, res) => {
   const { titulo, area, categoria, responsable, descripcion, etiquetas } = req.body;
   let { estado, fecha } = req.body;
   if (!titulo || !area || !categoria || !responsable || !descripcion) {
@@ -271,7 +364,7 @@ app.post("/api/evidencias", (req, res) => {
   res.status(201).json(newEvidence);
 });
 
-app.post("/api/consulta-inteligente", (req, res) => {
+app.post("/api/consulta-inteligente", autenticar, (req, res) => {
   const { pregunta } = req.body;
   if (!pregunta || pregunta.trim().length < 3) return res.status(400).json({ message: "La consulta debe contener al menos 3 caracteres." });
   const analisis = analizarConsulta(pregunta.trim(), readEvidences());
@@ -305,17 +398,20 @@ function resumenEventos() {
   return { total: auditLog.length, porOrigen, porTipo, ultimo: auditLog[0] || null };
 }
 
-app.get("/api/bitacora", (req, res) => res.json(filtrarEventos(auditLog, req.query)));
+app.get("/api/bitacora", autenticar, (req, res) => res.json(filtrarEventos(auditLog, req.query)));
 
-// Ingesta de eventos del propio portal (clics, navegación). Protegido por CORS.
+// Ingesta de eventos del propio portal (clics, navegación). El usuario se toma
+// del token de sesión si está presente (también admite envíos por sendBeacon al cerrar).
 app.post("/api/eventos", (req, res) => {
+  const sesion = verificarToken((req.header("Authorization") || "").replace(/^Bearer\s+/i, "").trim());
+  const usuarioSesion = sesion?.usuario || "usuario-portal";
   const entrada = Array.isArray(req.body) ? req.body : (Array.isArray(req.body?.eventos) ? req.body.eventos : [req.body]);
   const registrados = entrada
     .filter((e) => e && (e.accion || e.tipo))
     .map((e) => registrarEvento({
       origen: "portal",
       tipo: e.tipo || "click",
-      usuario: e.usuario || "usuario-portal",
+      usuario: e.usuario || usuarioSesion,
       accion: e.accion || "Interacción",
       detalle: e.detalle || "",
       metadatos: e.metadatos || {},
@@ -324,7 +420,7 @@ app.post("/api/eventos", (req, res) => {
   res.status(201).json({ registrados: registrados.length });
 });
 
-app.get("/api/resumen", (_req, res) => {
+app.get("/api/resumen", autenticar, (_req, res) => {
   const items = readEvidences();
   const estados = items.reduce((acc, e) => { acc[e.estado] = (acc[e.estado] || 0) + 1; return acc; }, {});
   res.json({
