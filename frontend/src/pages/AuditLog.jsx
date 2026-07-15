@@ -1,0 +1,2 @@
+import { useEffect, useState } from "react"; import { api } from "../services/api.js";
+export default function AuditLog({refresh}){const [logs,setLogs]=useState([]); useEffect(()=>{api.getBitacora().then(setLogs).catch(console.error)},[refresh]); return <section><h2>Bitácora del sistema</h2><div className="card">{logs.map(log=><div className="log" key={log.id}><strong>{log.accion}</strong><p>{log.detalle}</p><small>{new Date(log.fecha).toLocaleString()} · {log.usuario}</small></div>)}</div></section>}

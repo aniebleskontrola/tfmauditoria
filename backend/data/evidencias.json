@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "titulo": "Control de copias de seguridad mensual",
+    "categoria": "Backup",
+    "responsable": "Área de Tecnología",
+    "estado": "Aprobada",
+    "fecha": "2026-06-10",
+    "descripcion": "Evidencia del control mensual de copias de seguridad de servidores críticos.",
+    "etiquetas": [
+      "backup",
+      "servidores",
+      "disponibilidad",
+      "auditoría"
+    ]
+  },
+  {
+    "id": 2,
+    "titulo": "Revisión de usuarios activos",
+    "categoria": "Control de accesos",
+    "responsable": "Seguridad Informática",
+    "estado": "Pendiente",
+    "fecha": "2026-06-18",
+    "descripcion": "Listado de usuarios activos para validación de permisos y accesos a sistemas internos.",
+    "etiquetas": [
+      "usuarios",
+      "accesos",
+      "permisos",
+      "auditoría"
+    ]
+  },
+  {
+    "id": 3,
+    "titulo": "Informe de actualización de antivirus",
+    "categoria": "Protección endpoint",
+    "responsable": "Soporte Técnico",
+    "estado": "En revisión",
+    "fecha": "2026-06-22",
+    "descripcion": "Reporte de actualización de firmas antivirus en estaciones de trabajo.",
+    "etiquetas": [
+      "antivirus",
+      "endpoint",
+      "seguridad",
+      "actualización"
+    ]
+  }
+]
