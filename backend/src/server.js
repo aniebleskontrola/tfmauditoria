@@ -5,15 +5,17 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_FILE = path.join(__dirname, "..", "data", "evidencias.json");
+const AUDIT_FILE = path.join(__dirname, "..", "data", "bitacora.json");
+const MAX_EVENTOS = 5000;
 const app = express();
 const PORT = process.env.PORT || 4000;
-let auditLog = [{ id: 1, fecha: new Date().toISOString(), accion: "Inicio del sistema", usuario: "sistema", detalle: "Carga inicial del prototipo" }];
 
 app.use(helmet());
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
@@ -22,7 +24,117 @@ app.use(morgan("dev"));
 
 const readEvidences = () => JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
 const writeEvidences = (items) => fs.writeFileSync(DATA_FILE, JSON.stringify(items, null, 2), "utf-8");
-const addLog = (accion, usuario, detalle) => auditLog.unshift({ id: auditLog.length + 1, fecha: new Date().toISOString(), accion, usuario, detalle });
+
+// ---------------------------------------------------------------------------
+// Bitácora de auditoría: persistente en disco y unificada para todos los orígenes
+// (portal interno y sistemas externos conectados, p. ej. Kontrola).
+// ---------------------------------------------------------------------------
+const TIPOS_EVENTO = ["sistema", "navegacion", "click", "accion", "consulta", "api"];
+
+function readAudit() {
+  try {
+    const data = JSON.parse(fs.readFileSync(AUDIT_FILE, "utf-8"));
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+function persistAudit() {
+  try {
+    fs.writeFileSync(AUDIT_FILE, JSON.stringify(auditLog, null, 2), "utf-8");
+  } catch (err) {
+    console.error("No se pudo persistir la bitácora:", err.message);
+  }
+}
+
+let auditLog = readAudit();
+if (auditLog.length === 0) {
+  auditLog = [{
+    id: 1,
+    fecha: new Date().toISOString(),
+    origen: "sistema",
+    tipo: "sistema",
+    usuario: "sistema",
+    accion: "Inicio del sistema",
+    detalle: "Carga inicial del prototipo",
+    metadatos: {},
+  }];
+  persistAudit();
+}
+
+const nextEventId = () => auditLog.reduce((max, e) => Math.max(max, e.id || 0), 0) + 1;
+
+// Registra un evento en la bitácora y lo reenvía a los sistemas suscritos (webhook).
+function registrarEvento({ origen = "portal", tipo = "accion", usuario = "sistema", accion, detalle = "", metadatos = {}, ip = null } = {}) {
+  const evento = {
+    id: nextEventId(),
+    fecha: new Date().toISOString(),
+    origen,
+    tipo: TIPOS_EVENTO.includes(tipo) ? tipo : "accion",
+    usuario: usuario || "desconocido",
+    accion: accion || "Evento",
+    detalle,
+    metadatos: metadatos || {},
+    ip,
+  };
+  auditLog.unshift(evento);
+  if (auditLog.length > MAX_EVENTOS) auditLog.length = MAX_EVENTOS;
+  persistAudit();
+  reenviarWebhook(evento);
+  return evento;
+}
+
+// Compatibilidad con las llamadas previas del prototipo.
+const addLog = (accion, usuario, detalle, extra = {}) => registrarEvento({ accion, usuario, detalle, ...extra });
+
+// ---------------------------------------------------------------------------
+// Integración con sistemas externos: autenticación por API key y webhook
+// ---------------------------------------------------------------------------
+function parseApiKeys() {
+  const map = {};
+  (process.env.AUDIT_API_KEYS || "").split(",").map((s) => s.trim()).filter(Boolean).forEach((pair) => {
+    const idx = pair.indexOf(":");
+    if (idx > 0) {
+      const cliente = pair.slice(0, idx).trim();
+      const clave = pair.slice(idx + 1).trim();
+      if (cliente && clave) map[clave] = cliente;
+    }
+  });
+  if (process.env.KONTROLA_API_KEY) map[process.env.KONTROLA_API_KEY] = "kontrola";
+  if (Object.keys(map).length === 0) {
+    // Clave de demostración para que el prototipo funcione sin configuración previa.
+    map["demo-kontrola-key"] = "kontrola";
+    console.warn("[integración] No hay API keys configuradas; se habilita la clave de demostración 'demo-kontrola-key'.");
+  }
+  return map;
+}
+const API_KEYS = parseApiKeys();
+
+function requireApiKey(req, res, next) {
+  const bearer = (req.header("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  const key = req.header("X-API-Key") || bearer;
+  const cliente = key && API_KEYS[key];
+  if (!cliente) {
+    registrarEvento({ origen: "sistema", tipo: "api", usuario: "desconocido", accion: "Acceso rechazado", detalle: "Intento de integración con API key inválida o ausente.", ip: req.ip });
+    return res.status(401).json({ message: "API key inválida o ausente. Envíe el encabezado X-API-Key." });
+  }
+  req.cliente = cliente;
+  next();
+}
+
+async function reenviarWebhook(evento) {
+  const url = process.env.KONTROLA_WEBHOOK_URL;
+  if (!url) return;
+  try {
+    const body = JSON.stringify({ fuente: "tfmauditoria", evento });
+    const headers = { "Content-Type": "application/json" };
+    const secret = process.env.KONTROLA_WEBHOOK_SECRET;
+    if (secret) headers["X-Signature"] = "sha256=" + crypto.createHmac("sha256", secret).update(body).digest("hex");
+    await fetch(url, { method: "POST", headers, body });
+  } catch (err) {
+    console.error("[webhook] No se pudo reenviar el evento:", err.message);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Motor de consulta inteligente: TF-IDF + similitud coseno
@@ -155,7 +267,7 @@ app.post("/api/evidencias", (req, res) => {
   };
   items.unshift(newEvidence);
   writeEvidences(items);
-  addLog("Registro de evidencia", responsable, `Se registró la evidencia: ${titulo}`);
+  registrarEvento({ origen: "portal", tipo: "accion", usuario: responsable, accion: "Registro de evidencia", detalle: `Se registró la evidencia: ${titulo}`, metadatos: { evidenciaId: newEvidence.id, area }, ip: req.ip });
   res.status(201).json(newEvidence);
 });
 
@@ -163,11 +275,54 @@ app.post("/api/consulta-inteligente", (req, res) => {
   const { pregunta } = req.body;
   if (!pregunta || pregunta.trim().length < 3) return res.status(400).json({ message: "La consulta debe contener al menos 3 caracteres." });
   const analisis = analizarConsulta(pregunta.trim(), readEvidences());
-  addLog("Consulta inteligente", "auditor", `Consulta realizada: ${pregunta} (${analisis.total} resultados)`);
+  registrarEvento({ origen: "portal", tipo: "consulta", usuario: "auditor", accion: "Consulta inteligente", detalle: `Consulta realizada: ${pregunta} (${analisis.total} resultados)`, metadatos: { total: analisis.total }, ip: req.ip });
   res.json(analisis);
 });
 
-app.get("/api/bitacora", (_req, res) => res.json(auditLog));
+// Aplica filtros de consulta (origen, tipo, usuario, rango de fechas, texto, límite).
+function filtrarEventos(eventos, q) {
+  let out = eventos;
+  if (q.origen) out = out.filter((e) => e.origen === q.origen);
+  if (q.tipo) out = out.filter((e) => e.tipo === q.tipo);
+  if (q.usuario) out = out.filter((e) => (e.usuario || "").toLowerCase().includes(String(q.usuario).toLowerCase()));
+  if (q.desde) { const d = new Date(q.desde); if (!isNaN(d)) out = out.filter((e) => new Date(e.fecha) >= d); }
+  if (q.hasta) { const h = new Date(q.hasta); if (!isNaN(h)) out = out.filter((e) => new Date(e.fecha) <= h); }
+  if (q.q) {
+    const t = String(q.q).toLowerCase();
+    out = out.filter((e) => `${e.accion} ${e.detalle} ${e.usuario}`.toLowerCase().includes(t));
+  }
+  const limit = Math.min(parseInt(q.limit, 10) || out.length, MAX_EVENTOS);
+  return out.slice(0, limit);
+}
+
+function resumenEventos() {
+  const porOrigen = {};
+  const porTipo = {};
+  auditLog.forEach((e) => {
+    porOrigen[e.origen] = (porOrigen[e.origen] || 0) + 1;
+    porTipo[e.tipo] = (porTipo[e.tipo] || 0) + 1;
+  });
+  return { total: auditLog.length, porOrigen, porTipo, ultimo: auditLog[0] || null };
+}
+
+app.get("/api/bitacora", (req, res) => res.json(filtrarEventos(auditLog, req.query)));
+
+// Ingesta de eventos del propio portal (clics, navegación). Protegido por CORS.
+app.post("/api/eventos", (req, res) => {
+  const entrada = Array.isArray(req.body) ? req.body : (Array.isArray(req.body?.eventos) ? req.body.eventos : [req.body]);
+  const registrados = entrada
+    .filter((e) => e && (e.accion || e.tipo))
+    .map((e) => registrarEvento({
+      origen: "portal",
+      tipo: e.tipo || "click",
+      usuario: e.usuario || "usuario-portal",
+      accion: e.accion || "Interacción",
+      detalle: e.detalle || "",
+      metadatos: e.metadatos || {},
+      ip: req.ip,
+    }));
+  res.status(201).json({ registrados: registrados.length });
+});
 
 app.get("/api/resumen", (_req, res) => {
   const items = readEvidences();
@@ -177,7 +332,46 @@ app.get("/api/resumen", (_req, res) => {
     estados,
     areas: [...new Set(items.map((e) => e.area).filter(Boolean))],
     categorias: [...new Set(items.map((e) => e.categoria))],
+    eventos: resumenEventos(),
   });
+});
+
+// ---------------------------------------------------------------------------
+// API de integración para sistemas externos (requiere X-API-Key)
+// ---------------------------------------------------------------------------
+// Verificación de credenciales / handshake.
+app.get("/api/integracion/estado", requireApiKey, (req, res) => {
+  res.json({
+    conectado: true,
+    cliente: req.cliente,
+    servicio: "tfmauditoria",
+    tiposEvento: TIPOS_EVENTO,
+    resumen: resumenEventos(),
+  });
+});
+
+// Ingesta de movimientos desde sistemas externos (p. ej. Kontrola).
+app.post("/api/integracion/eventos", requireApiKey, (req, res) => {
+  const entrada = Array.isArray(req.body) ? req.body : (Array.isArray(req.body?.eventos) ? req.body.eventos : [req.body]);
+  const registrados = entrada
+    .filter((e) => e && (e.accion || e.tipo))
+    .map((e) => registrarEvento({
+      origen: req.cliente,
+      tipo: e.tipo || "api",
+      usuario: e.usuario || req.cliente,
+      accion: e.accion || "Evento externo",
+      detalle: e.detalle || "",
+      metadatos: e.metadatos || {},
+      ip: req.ip,
+    }));
+  if (registrados.length === 0) return res.status(400).json({ message: "No se recibió ningún evento válido. Envíe { accion, tipo, usuario, detalle, metadatos }." });
+  res.status(201).json({ registrados: registrados.length, eventos: registrados });
+});
+
+// Lectura de la bitácora unificada por parte de sistemas externos.
+app.get("/api/integracion/bitacora", requireApiKey, (req, res) => {
+  registrarEvento({ origen: req.cliente, tipo: "api", usuario: req.cliente, accion: "Lectura de bitácora", detalle: "Descarga de movimientos vía API de integración.", ip: req.ip });
+  res.json(filtrarEventos(auditLog, req.query));
 });
 
 app.listen(PORT, () => console.log(`API disponible en http://localhost:${PORT}`));

@@ -14,4 +14,14 @@
 .interpretacion{display:flex;gap:6px;flex-wrap:wrap;align-items:center;color:#475569}
 .tags{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
 .tag{background:#eef2ff;color:#3730a3;border-radius:999px;padding:3px 10px;font-size:12px}
+.origen-tag{align-self:flex-start;background:#e2e8f0;color:#334155;border-radius:999px;padding:3px 12px;font-weight:700;font-size:12px;white-space:nowrap;text-transform:capitalize}
+.origen-kontrola{background:#dcfce7;color:#166534}
+.origen-portal{background:#dbeafe;color:#1e40af}
+.origen-sistema{background:#fef3c7;color:#92400e}
+.tabla{width:100%;border-collapse:collapse;font-size:14px}
+.tabla th,.tabla td{text-align:left;padding:8px 10px;border-bottom:1px solid #e5e7eb}
+.tabla th{color:#475569}
+.tabla td:first-child{font-weight:700;color:#1e40af}
+code{background:#f1f5f9;border-radius:6px;padding:2px 6px;font-family:Consolas,Monaco,monospace;font-size:13px}
+.codeblock{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:16px;overflow-x:auto;font-family:Consolas,Monaco,monospace;font-size:13px;white-space:pre-wrap;word-break:break-word}
 @media(max-width:800px){.app{grid-template-columns:1fr}.query-form{display:grid}.filtros{flex-direction:column;align-items:stretch}}

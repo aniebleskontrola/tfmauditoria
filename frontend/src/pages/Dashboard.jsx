@@ -27,6 +27,17 @@ export default function Dashboard({ refresh }) {
         <h3>Categorías registradas</h3>
         <p>{summary.categorias.join(", ")}</p>
       </div>
+      {summary.eventos && (
+        <div className="card">
+          <h3>Movimientos auditados</h3>
+          <p className="lead">Total de eventos en la bitácora: <strong>{summary.eventos.total}</strong></p>
+          <div className="tags">
+            {Object.entries(summary.eventos.porOrigen || {}).map(([o, n]) => (
+              <span className="tag" key={o}>{o}: {n}</span>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
