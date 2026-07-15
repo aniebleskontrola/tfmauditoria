@@ -26,17 +26,17 @@ const addLog = (accion, usuario, detalle) => auditLog.unshift({ id: auditLog.len
 
 function scoreEvidence(query, evidence) {
   const q = query.toLowerCase();
-  const text = [evidence.titulo, evidence.categoria, evidence.responsable, evidence.estado, evidence.descripcion, ...(evidence.etiquetas || [])].join(" ").toLowerCase();
+  const text = [evidence.titulo, evidence.area, evidence.categoria, evidence.responsable, evidence.estado, evidence.descripcion, ...(evidence.etiquetas || [])].join(" ").toLowerCase();
   return q.split(/\s+/).filter(Boolean).reduce((score, token) => score + (text.includes(token) ? 1 : 0), 0);
 }
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 app.get("/api/evidencias", (_req, res) => res.json(readEvidences()));
 app.post("/api/evidencias", (req, res) => {
-  const { titulo, categoria, responsable, estado, fecha, descripcion, etiquetas } = req.body;
-  if (!titulo || !categoria || !responsable || !estado || !fecha || !descripcion) return res.status(400).json({ message: "Todos los campos principales son obligatorios." });
+  const { titulo, area, categoria, responsable, estado, fecha, descripcion, etiquetas } = req.body;
+  if (!titulo || !area || !categoria || !responsable || !estado || !fecha || !descripcion) return res.status(400).json({ message: "Todos los campos principales son obligatorios." });
   const items = readEvidences();
-  const newEvidence = { id: items.length ? Math.max(...items.map((e) => e.id)) + 1 : 1, titulo, categoria, responsable, estado, fecha, descripcion, etiquetas: String(etiquetas || "").split(",").map((t) => t.trim()).filter(Boolean) };
+  const newEvidence = { id: items.length ? Math.max(...items.map((e) => e.id)) + 1 : 1, titulo, area, categoria, responsable, estado, fecha, descripcion, etiquetas: String(etiquetas || "").split(",").map((t) => t.trim()).filter(Boolean) };
   items.unshift(newEvidence);
   writeEvidences(items);
   addLog("Registro de evidencia", responsable, `Se registró la evidencia: ${titulo}`);
@@ -53,6 +53,6 @@ app.get("/api/bitacora", (_req, res) => res.json(auditLog));
 app.get("/api/resumen", (_req, res) => {
   const items=readEvidences();
   const estados=items.reduce((acc,e)=>{acc[e.estado]=(acc[e.estado]||0)+1; return acc;},{});
-  res.json({ total: items.length, estados, categorias: [...new Set(items.map((e)=>e.categoria))] });
+  res.json({ total: items.length, estados, areas: [...new Set(items.map((e)=>e.area).filter(Boolean))], categorias: [...new Set(items.map((e)=>e.categoria))] });
 });
 app.listen(PORT, () => console.log(`API disponible en http://localhost:${PORT}`));

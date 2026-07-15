@@ -2,6 +2,7 @@
   {
     "id": 1,
     "titulo": "Control de copias de seguridad mensual",
+    "area": "Infraestructura",
     "categoria": "Backup",
     "responsable": "Área de Tecnología",
     "estado": "Aprobada",
@@ -17,6 +18,7 @@
   {
     "id": 2,
     "titulo": "Revisión de usuarios activos",
+    "area": "Seguridad",
     "categoria": "Control de accesos",
     "responsable": "Seguridad Informática",
     "estado": "Pendiente",
@@ -32,6 +34,7 @@
   {
     "id": 3,
     "titulo": "Informe de actualización de antivirus",
+    "area": "Seguridad",
     "categoria": "Protección endpoint",
     "responsable": "Soporte Técnico",
     "estado": "En revisión",
@@ -42,6 +45,150 @@
       "endpoint",
       "seguridad",
       "actualización"
+    ]
+  },
+  {
+    "id": 4,
+    "titulo": "Plan de continuidad del negocio",
+    "area": "Riesgos",
+    "categoria": "Continuidad",
+    "responsable": "Gestión de Riesgos",
+    "estado": "Aprobada",
+    "fecha": "2026-06-06",
+    "descripcion": "Documento del plan de continuidad y recuperación ante desastres de la organización.",
+    "etiquetas": [
+      "continuidad",
+      "BCP",
+      "desastre",
+      "recuperación"
+    ]
+  },
+  {
+    "id": 5,
+    "titulo": "Registro de cambios en firewall",
+    "area": "Infraestructura",
+    "categoria": "Configuración",
+    "responsable": "Área de Tecnología",
+    "estado": "Aprobada",
+    "fecha": "2026-06-08",
+    "descripcion": "Registro de cambios y reglas aplicadas en el firewall perimetral.",
+    "etiquetas": [
+      "firewall",
+      "cambios",
+      "reglas",
+      "configuración"
+    ]
+  },
+  {
+    "id": 6,
+    "titulo": "Evaluación de riesgos de proveedores",
+    "area": "Riesgos",
+    "categoria": "Gestión de riesgos",
+    "responsable": "Gestión de Riesgos",
+    "estado": "Pendiente",
+    "fecha": "2026-06-11",
+    "descripcion": "Análisis de riesgos asociados a proveedores externos y terceros de servicios.",
+    "etiquetas": [
+      "riesgos",
+      "proveedores",
+      "terceros",
+      "evaluación"
+    ]
+  },
+  {
+    "id": 7,
+    "titulo": "Acta de capacitación en concienciación de seguridad",
+    "area": "Talento humano",
+    "categoria": "Capacitación",
+    "responsable": "Gestión Humana",
+    "estado": "Aprobada",
+    "fecha": "2026-06-23",
+    "descripcion": "Asistencia y resultados de la jornada de concienciación en seguridad para el personal.",
+    "etiquetas": [
+      "capacitación",
+      "concienciación",
+      "formación",
+      "personal"
+    ]
+  },
+  {
+    "id": 8,
+    "titulo": "Matriz de riesgos de ciberseguridad",
+    "area": "Riesgos",
+    "categoria": "Gestión de riesgos",
+    "responsable": "Gestión de Riesgos",
+    "estado": "Aprobada",
+    "fecha": "2026-06-19",
+    "descripcion": "Matriz de identificación y valoración de riesgos de ciberseguridad de la organización.",
+    "etiquetas": [
+      "riesgos",
+      "matriz",
+      "ciberseguridad",
+      "valoración"
+    ]
+  },
+  {
+    "id": 9,
+    "titulo": "Informe de simulacro de incidente",
+    "area": "Seguridad",
+    "categoria": "Incidentes",
+    "responsable": "Centro de Operaciones",
+    "estado": "Aprobada",
+    "fecha": "2026-06-20",
+    "descripcion": "Resultado del simulacro de respuesta ante ransomware y recuperación de servicios.",
+    "etiquetas": [
+      "simulacro",
+      "ransomware",
+      "incidente",
+      "respuesta"
+    ]
+  },
+  {
+    "id": 10,
+    "titulo": "Registro de parcheo de servidores",
+    "area": "Infraestructura",
+    "categoria": "Configuración",
+    "responsable": "Área de Tecnología",
+    "estado": "En revisión",
+    "fecha": "2026-06-14",
+    "descripcion": "Evidencia de aplicación de parches de seguridad en servidores críticos.",
+    "etiquetas": [
+      "parches",
+      "actualización",
+      "servidores",
+      "mantenimiento"
+    ]
+  },
+  {
+    "id": 11,
+    "titulo": "Política de control de accesos",
+    "area": "Seguridad",
+    "categoria": "Control de accesos",
+    "responsable": "Seguridad Informática",
+    "estado": "Aprobada",
+    "fecha": "2026-06-13",
+    "descripcion": "Documento de política de gestión de identidades y control de accesos a sistemas.",
+    "etiquetas": [
+      "política",
+      "accesos",
+      "identidades",
+      "gobierno"
+    ]
+  },
+  {
+    "id": 12,
+    "titulo": "Prueba de restauración de respaldos",
+    "area": "Infraestructura",
+    "categoria": "Backup",
+    "responsable": "Área de Tecnología",
+    "estado": "En revisión",
+    "fecha": "2026-06-12",
+    "descripcion": "Prueba de restauración de respaldos para validar la disponibilidad de la información.",
+    "etiquetas": [
+      "restauración",
+      "respaldos",
+      "pruebas",
+      "disponibilidad"
     ]
   }
 ]
