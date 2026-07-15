@@ -34,12 +34,6 @@ export default function Login({ onLogin }) {
         </label>
         <button type="submit" disabled={cargando}>{cargando ? "Verificando..." : "Iniciar sesión"}</button>
         {error && <p className="error">{error}</p>}
-        <div className="login-hint">
-          <strong>Credenciales de demostración</strong>
-          <span>admin / Admin123* · administrador</span>
-          <span>auditor / Auditor123* · auditor</span>
-          <span>consultor / Consultor123* · solo lectura</span>
-        </div>
       </form>
     </div>
   );
