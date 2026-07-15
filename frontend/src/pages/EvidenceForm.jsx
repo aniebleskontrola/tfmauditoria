@@ -2,10 +2,11 @@ import { useState } from "react";
 import { api } from "../services/api.js";
 
 const AREAS = ["Seguridad", "Infraestructura", "Riesgos", "Talento humano"];
-const initialState = { titulo: "", area: "Seguridad", categoria: "", responsable: "", estado: "Pendiente", fecha: "", descripcion: "", etiquetas: "" };
+const hoy = () => new Date().toISOString().slice(0, 10);
+const initialState = () => ({ titulo: "", area: "Seguridad", categoria: "", responsable: "", estado: "Pendiente", fecha: hoy(), descripcion: "", etiquetas: "" });
 
 export default function EvidenceForm({ onCreated }) {
-  const [form, setForm] = useState(initialState);
+  const [form, setForm] = useState(initialState());
   const [message, setMessage] = useState("");
 
   const updateField = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -15,7 +16,7 @@ export default function EvidenceForm({ onCreated }) {
     setMessage("");
     try {
       await api.createEvidencia(form);
-      setForm(initialState);
+      setForm(initialState());
       setMessage("Evidencia registrada correctamente.");
       onCreated();
     } catch (error) {

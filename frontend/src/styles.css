@@ -5,4 +5,13 @@
 .filtros .grow{flex:1;min-width:220px}
 .list{display:grid;gap:14px}
 .empty{color:#64748b}
+.recomendacion{border-left:5px solid #2563eb}
+.recomendacion h3{margin-top:0;color:#1d4ed8}
+.rec-line{display:flex;align-items:center;gap:10px;font-size:17px}
+.score{background:#2563eb;color:#fff;border-radius:999px;padding:3px 12px;font-weight:700;font-size:13px}
+.accion{background:#eff6ff;border-radius:10px;padding:10px 12px;font-weight:600;color:#1e3a8a}
+.result-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.interpretacion{display:flex;gap:6px;flex-wrap:wrap;align-items:center;color:#475569}
+.tags{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.tag{background:#eef2ff;color:#3730a3;border-radius:999px;padding:3px 10px;font-size:12px}
 @media(max-width:800px){.app{grid-template-columns:1fr}.query-form{display:grid}.filtros{flex-direction:column;align-items:stretch}}

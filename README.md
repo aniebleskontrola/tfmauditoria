@@ -8,8 +8,9 @@ El objetivo del prototipo es demostrar una herramienta web para registrar, clasi
 
 - Frontend: React.js + Vite
 - Backend: Node.js + Express
-- Persistencia demostrativa: archivo JSON local
-- Seguridad aplicada en prototipo: Helmet, validaciones básicas, control lógico de roles y bitácora de acciones.
+- Consulta inteligente: motor TF-IDF + similitud coseno con normalización, stopwords en español y capa de recomendación.
+- Persistencia demostrativa: archivo JSON local (los registros creados se guardan en `backend/data/evidencias.json`).
+- Seguridad aplicada en prototipo: Helmet, validaciones básicas y bitácora de acciones.
 
 ## Instalación y ejecución
 
@@ -35,10 +36,10 @@ Portal: `http://localhost:5173`
 
 ## Funcionalidades
 
-- Panel resumen de evidencias.
-- Registro de evidencias.
-- Repositorio con filtros.
-- Consulta inteligente por lenguaje natural.
+- Panel resumen de evidencias (total, estados y áreas).
+- Registro de evidencias con persistencia en JSON.
+- Repositorio con filtros por área, estado y texto.
+- Consulta inteligente (TF-IDF + similitud coseno) que ordena por relevancia y recomienda qué evidencia usar y qué acción tomar.
 - Bitácora de auditoría.
 
 ## Nota de seguridad
